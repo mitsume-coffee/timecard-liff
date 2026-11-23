@@ -71,7 +71,6 @@
     <button class="icon-btn" id="btnEdit" title="今日の記録を編集">✏️</button>
   </div>
 </header>
-
 <main>
   <!-- 打刻ビュー -->
   <section id="viewPunch" class="view open">
@@ -121,7 +120,14 @@
     <div class="field"><label>退社</label><input type="time" id="editOut"></div>
     <div class="field"><label>休憩（分）</label><select id="editBreak"></select></div>
     <div class="field"><label>休暇</label>
-      <select id="editLeave"><option value="">なし</option><option value="leave">休暇</option></select>
+      <select id="editLeave">
+        <option value="">なし</option>
+        <option value="年休">年休</option>
+        <option value="半休">半休</option>
+        <option value="忌引">忌引</option>
+        <option value="欠勤">欠勤</option>
+        <option value="他種">他種</option>
+      </select>
     </div>
     <button class="save-btn" id="btnSaveEdit">保存する</button>
     <button class="del-btn" id="btnDelete">この日の記録を削除</button>
@@ -136,13 +142,12 @@
     <button class="cancel-btn" id="brkCancel">やめる</button>
   </div>
 </div>
-
 <script>
 const LIFF_ID = '2012734423-JWdExkSG';
 const API_URL = 'https://script.google.com/macros/s/AKfycbwfi7HB_aq0yTKIQyCEofiDXIB3xRxnXC3dCzOO6_iWmdypGeMuNDREvH8JBvo7YXmU/exec';
 
 let idToken = '', myName = '';
-let state = null;
+let state = null;         // getStatus の結果
 let editDate = '', editBack = 'punch';
 
 function showMsg(text, ok){
@@ -191,9 +196,10 @@ function render(){
   document.getElementById('dateLabel').textContent = state.dateLabel;
   const rec = state.record;
   const greet = document.getElementById('greet');
-  if (rec.leave) greet.textContent = state.name + 'さん、今日は休暇です';
+  if (rec.leave) greet.textContent = state.name + 'さん、今日は' + rec.leave + 'です';
   else if (rec.outTime) greet.textContent = state.name + 'さん、お疲れ様でした！';
   else greet.textContent = state.name + 'さん、おはようございます！';
+
   const btnIn = document.getElementById('btnIn');
   const btnOut = document.getElementById('btnOut');
   btnIn.disabled = !state.canIn;
@@ -229,7 +235,6 @@ async function doPunch(kind, breakMin){
     showMsg(e.message, false);
   }
 }
-
 /* 休憩グリッド（6分刻み 0〜120分） */
 (function buildBreakGrid(){
   const grid = document.getElementById('brkGrid');
@@ -280,7 +285,7 @@ async function loadList(ym){
     tr.className = 'tappable' + (state && d.date === state.date ? ' today' : '');
     const cells = [
       d.day + ' (' + d.dow + ')',
-      d.leave ? '休暇' : (d.inTime || ''),
+      (d.inTime || d.leave || ''),
       d.outTime || '',
       d.inTime && d.outTime ? d.breakMin + '分' : '',
       d.workMin !== null ? fmtH(d.workMin) + 'h' : ''
@@ -314,7 +319,7 @@ function openEdit(d){
   document.getElementById('editIn').value = d.inTime || '';
   document.getElementById('editOut').value = d.outTime || '';
   document.getElementById('editBreak').value = String(d.breakMin || 0);
-  document.getElementById('editLeave').value = d.leave ? 'leave' : '';
+  document.getElementById('editLeave').value = d.leave || '';
   const del = document.getElementById('btnDelete');
   del.classList.remove('armed'); del.textContent = 'この日の記録を削除';
   showEditMsg('');
@@ -327,7 +332,7 @@ document.getElementById('btnEdit').addEventListener('click', function(){
 });
 document.getElementById('btnSaveEdit').addEventListener('click', async function(){
   try {
-    const leave = document.getElementById('editLeave').value === 'leave';
+    const leave = document.getElementById('editLeave').value;
     await api('saveEdit', { payload: JSON.stringify({
       date: editDate,
       inTime: document.getElementById('editIn').value,
