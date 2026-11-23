@@ -32,8 +32,6 @@
   .punch.active-in{background:var(--blue); border-color:var(--blue); color:#fff; box-shadow:0 4px 14px rgba(43,108,176,.35);}
   .punch.active-out{background:var(--green); border-color:var(--green); color:#fff; box-shadow:0 4px 14px rgba(10,90,11,.3);}
   .punch:disabled{opacity:.55; cursor:default; box-shadow:none;}
-  .leave-link{display:block; margin:2px auto 0; background:none; border:none; color:var(--olive); font-size:15px; text-decoration:underline; cursor:pointer; padding:6px;}
-  .leave-link:disabled{color:var(--muted); text-decoration:none; cursor:default;}
   /* モーダル */
   .overlay{display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:30; align-items:center; justify-content:center; padding:18px;}
   .overlay.open{display:flex;}
@@ -86,7 +84,6 @@
           <span class="big">出社</span>
           <span class="sub" id="inSub"></span>
         </button>
-        <button class="leave-link" id="btnLeave">今日は休暇にする</button>
       </div>
       <div>
         <button class="punch" id="btnOut">
@@ -205,9 +202,6 @@ function render(){
   btnOut.className = 'punch' + (state.canOut ? ' active-out' : '');
   document.getElementById('inSub').textContent = rec.inTime ? rec.inTime : '';
   document.getElementById('outSub').textContent = rec.outTime ? (rec.outTime + '（休憩 ' + rec.breakMin + '分）') : '';
-  const lv = document.getElementById('btnLeave');
-  lv.disabled = !!rec.inTime || !!rec.outTime || rec.leave;
-  lv.textContent = rec.leave ? '休暇を取り消す（鉛筆ボタンから編集）' : '今日は休暇にする';
 }
 
 function getPosition(){
@@ -234,7 +228,7 @@ async function doPunch(kind, breakMin){
   } catch (e) {
     showMsg(e.message, false);
   }
-  }
+}
 
 /* 休憩グリッド（6分刻み 0〜120分） */
 (function buildBreakGrid(){
@@ -263,15 +257,6 @@ document.getElementById('btnOut').addEventListener('click', function(){
 document.getElementById('brkCancel').addEventListener('click', function(){
   document.getElementById('brkOverlay').classList.remove('open');
 });
-document.getElementById('btnLeave').addEventListener('click', async function(){
-  try {
-    await api('saveEdit', { payload: JSON.stringify({ date: state.date, inTime:'', outTime:'', breakMin:0, leave:true }) });
-    state = await api('getStatus');
-    showMsg('今日を休暇にしました', true);
-    render();
-  } catch (e) { showMsg(e.message, false); }
-});
-
 /* ビュー切替 */
 function showView(id){
   ['viewPunch','viewList','viewEdit'].forEach(function(v){
