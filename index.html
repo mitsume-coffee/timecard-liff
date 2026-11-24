@@ -71,6 +71,7 @@
     <button class="icon-btn" id="btnEdit" title="今日の記録を編集">✏️</button>
   </div>
 </header>
+
 <main>
   <!-- 打刻ビュー -->
   <section id="viewPunch" class="view open">
@@ -115,6 +116,7 @@
   <section id="viewEdit" class="view">
     <button class="back-btn" data-back>← もどる</button>
     <div class="date" id="editTitle"></div>
+    <p id="editRaw" style="font-size:13px;color:var(--muted);margin:0 2px 12px;"></p>
     <div class="msg" id="editMsg"></div>
     <div class="field"><label>出社</label><input type="time" id="editIn"></div>
     <div class="field"><label>退社</label><input type="time" id="editOut"></div>
@@ -142,6 +144,7 @@
     <button class="cancel-btn" id="brkCancel">やめる</button>
   </div>
 </div>
+
 <script>
 const LIFF_ID = '2012734423-JWdExkSG';
 const API_URL = 'https://script.google.com/macros/s/AKfycbwfi7HB_aq0yTKIQyCEofiDXIB3xRxnXC3dCzOO6_iWmdypGeMuNDREvH8JBvo7YXmU/exec';
@@ -235,6 +238,7 @@ async function doPunch(kind, breakMin){
     showMsg(e.message, false);
   }
 }
+
 /* 休憩グリッド（6分刻み 0〜120分） */
 (function buildBreakGrid(){
   const grid = document.getElementById('brkGrid');
@@ -290,7 +294,19 @@ async function loadList(ym){
       d.inTime && d.outTime ? d.breakMin + '分' : '',
       d.workMin !== null ? fmtH(d.workMin) + 'h' : ''
     ];
-    cells.forEach(function(c){ const td = document.createElement('td'); td.textContent = c; tr.appendChild(td); });
+    cells.forEach(function(c, idx){
+      const td = document.createElement('td');
+      td.textContent = c;
+      const raw = idx === 1 ? d.rawIn : (idx === 2 ? d.rawOut : '');
+      const eff = idx === 1 ? d.inTime : (idx === 2 ? d.outTime : '');
+      if (raw && eff && raw !== eff) {
+        const sub = document.createElement('div');
+        sub.style.cssText = 'font-size:11px;color:var(--muted)';
+        sub.textContent = '打刻 ' + raw;
+        td.appendChild(sub);
+      }
+      tr.appendChild(td);
+    });
     tr.addEventListener('click', function(){ openEdit(d); });
     tb.appendChild(tr);
   });
@@ -320,6 +336,12 @@ function openEdit(d){
   document.getElementById('editOut').value = d.outTime || '';
   document.getElementById('editBreak').value = String(d.breakMin || 0);
   document.getElementById('editLeave').value = d.leave || '';
+  const rawEl = document.getElementById('editRaw');
+  if (d.rawIn || d.rawOut) {
+    rawEl.textContent = '打刻した時刻：' + (d.rawIn ? '出社 ' + d.rawIn : '') + (d.rawIn && d.rawOut ? ' / ' : '') + (d.rawOut ? '退社 ' + d.rawOut : '');
+  } else {
+    rawEl.textContent = '';
+  }
   const del = document.getElementById('btnDelete');
   del.classList.remove('armed'); del.textContent = 'この日の記録を削除';
   showEditMsg('');
@@ -328,7 +350,7 @@ function openEdit(d){
 document.getElementById('btnEdit').addEventListener('click', function(){
   if (!state) return;
   const rec = state.record;
-  openEdit({ date: state.date, inTime: rec.inTime, outTime: rec.outTime, breakMin: rec.breakMin, leave: rec.leave });
+  openEdit({ date: state.date, inTime: rec.inTime, outTime: rec.outTime, breakMin: rec.breakMin, leave: rec.leave, rawIn: rec.rawIn, rawOut: rec.rawOut });
 });
 document.getElementById('btnSaveEdit').addEventListener('click', async function(){
   try {
